@@ -1,6 +1,8 @@
 require_relative 'client/version'
 require 'open3'
 require_relative 'client/branch'
+require_relative 'client/history'
+require_relative 'client/entry'
 
 module Git
   BASE_COMMAND = 'git'
@@ -92,19 +94,19 @@ module Git
       else
         output = `cd #{@repository.path}; #{BASE_COMMAND}  --no-pager log --pretty=format:"%aN::%aE::%h::%s" #{start_tag}..#{end_tag} 2>&1`
       end
+      history = History.new
 
-      entries = []
       raw_entries = output.split("\n").reverse
       raw_entries.each do |raw_entry|
         entry_attributes = raw_entry.split('::')
-        entry = {}
-        entry[:author] = entry_attributes[0]
-        entry[:email] = entry_attributes[1]
-        entry[:abbreviated_commit_hash] = entry_attributes[2]
-        entry[:message] = entry_attributes[3]
-        entries << entry
+        entry = Entry.new
+        entry.author = entry_attributes[0]
+        entry.email = entry_attributes[1]
+        entry.abbreviated_commit_hash = entry_attributes[2]
+        entry.message = entry_attributes[3]
+        history << entry
       end
-      entries
+      history
     end
 
     def push(include_tags, repo='origin', refspec='')
@@ -113,6 +115,18 @@ module Git
       else
         output = `cd #{@repository.path}; #{BASE_COMMAND} push #{repo} #{refspec} --progress 2>&1`
       end
+      if output.include? 'fatal'
+        raise(output)
+      end
+    end
+    def annotated_tag(version, message)
+      output = `cd #{@repository.path}; #{BASE_COMMAND} tag -a #{version} -m "#{message}" 2>&1`
+      if output.include? 'fatal'
+        raise(output)
+      end
+    end
+    def lightweight_tag(version)
+      output = `cd #{@repository.path}; #{BASE_COMMAND} tag #{version} 2>&1`
       if output.include? 'fatal'
         raise(output)
       end
