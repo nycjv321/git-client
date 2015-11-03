@@ -94,6 +94,9 @@ module Git
       else
         output = `cd #{@repository.path}; #{BASE_COMMAND}  --no-pager log --pretty=format:"%aN::%aE::%h::%s" #{start_tag}..#{end_tag} 2>&1`
       end
+      if output.include? 'fatal'
+        raise(output)
+      end
       history = History.new
 
       raw_entries = output.split("\n").reverse
